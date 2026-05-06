@@ -3,18 +3,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define CHECK_CUDA_ERROR(err)                                              \
-  if (err != cudaSuccess) {                                                \
-    fprintf(stderr, "CUDA错误 位置:%s:%d | 原因:%s\n", __FILE__, __LINE__, \
-            cudaGetErrorString(err));                                      \
-    exit(EXIT_FAILURE);                                                    \
-  }
+#define CHECK_CUDA_ERROR(err)                                                  \
+    if (err != cudaSuccess) {                                                  \
+        fprintf(stderr, "CUDA错误 位置:%s:%d | 原因:%s\n", __FILE__, __LINE__, \
+                cudaGetErrorString(err));                                      \
+        exit(EXIT_FAILURE);                                                    \
+    }
 
 // ==========================================
 // 配置参数
 // ==========================================
-const int MATRIX_SIZE = 8192; // 矩阵大小：1024x1024
-const int TILE_WIDTH = 8;     // 分块大小：16x16
+const int MATRIX_SIZE = 8192;  // 矩阵大小：1024x1024
+const int TILE_WIDTH = 8;      // 分块大小：16x16
 
 // ==========================================
 // 内核1：简单矩阵乘法（无共享内存，无同步）
@@ -60,13 +60,13 @@ __global__ void tiledMatrixMultiply(const float* M, const float* N, float* P, in
         if (Row < Width && (ph * TILE_WIDTH + tx) < Width) {
             Mds[ty][tx] = M[Row * Width + ph * TILE_WIDTH + tx];
         } else {
-            Mds[ty][tx] = 0.0f; // 越界填0
+            Mds[ty][tx] = 0.0f;  // 越界填0
         }
 
         if ((ph * TILE_WIDTH + ty) < Width && Col < Width) {
             Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * Width + Col];
         } else {
-            Nds[ty][tx] = 0.0f; // 越界填0
+            Nds[ty][tx] = 0.0f;  // 越界填0
         }
 
         // -----------------------------------------------------------
@@ -98,7 +98,7 @@ __global__ void tiledMatrixMultiply(const float* M, const float* N, float* P, in
 // ==========================================
 void initializeMatrix(float* mat, int size) {
     for (int i = 0; i < size * size; i++) {
-        mat[i] = static_cast<float>(rand()) / RAND_MAX; // 0~1 随机数
+        mat[i] = static_cast<float>(rand()) / RAND_MAX;  // 0~1 随机数
     }
 }
 
@@ -125,10 +125,10 @@ int main() {
     printf("🔲 分块大小: %dx%d\n\n", TILE_WIDTH, TILE_WIDTH);
 
     // 1. 分配主机内存
-    float *M_h = (float*)malloc(matrix_bytes);
-    float *N_h = (float*)malloc(matrix_bytes);
-    float *P_simple_h = (float*)malloc(matrix_bytes);
-    float *P_tiled_h = (float*)malloc(matrix_bytes);
+    float* M_h = (float*)malloc(matrix_bytes);
+    float* N_h = (float*)malloc(matrix_bytes);
+    float* P_simple_h = (float*)malloc(matrix_bytes);
+    float* P_tiled_h = (float*)malloc(matrix_bytes);
 
     // 2. 初始化输入数据
     initializeMatrix(M_h, MATRIX_SIZE);
@@ -148,7 +148,7 @@ int main() {
     // 5. 配置内核启动参数
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
     dim3 gridDim((MATRIX_SIZE + TILE_WIDTH - 1) / TILE_WIDTH,
-                  (MATRIX_SIZE + TILE_WIDTH - 1) / TILE_WIDTH);
+                 (MATRIX_SIZE + TILE_WIDTH - 1) / TILE_WIDTH);
 
     // 6. 测试【简单版本】性能
     cudaEvent_t start_simple, stop_simple;
