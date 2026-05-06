@@ -12,3 +12,5 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 add_subdirectory(leetCuda)
 
 add_subdirectory(exercise/ch3)
+
+add_subdirectory(exercise/ch7)
