@@ -18,7 +18,7 @@ struct Config {
 void cpu_stencil(const float* in, float* out, int nx, int ny, int nz);
 
 // Naive CUDA kernel
-void launch_naive(const float* d_in, float* d_out, int nx, int ny, int nz);
+void launch_native(const float* d_in, float* d_out, int nx, int ny, int nz);
 
 // Shared memory CUDA kernel
 void launch_shared(const float* d_in, float* d_out, int nx, int ny, int nz);

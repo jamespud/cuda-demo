@@ -1,6 +1,9 @@
 #include "../include/common.cuh"
 #include "../include/stencil.cuh"
 
+#include <exception>
+#include <string>
+
 // Performance statistics structure
 struct PerfStats {
     double time_ms;
@@ -43,18 +46,56 @@ void print_performance_table(const PerfStats& cpu, const PerfStats& naive,
     std::cout << "========================================" << std::endl;
 }
 
-int main() {
-    constexpr int NX = 256;
-    constexpr int NY = 256;
-    constexpr int NZ = 256;
+bool parse_dimension_arg(const char* text, int& value) {
+    try {
+        std::string token(text);
+        size_t consumed = 0;
+        int parsed = std::stoi(token, &consumed);
+        if (consumed != token.size() || parsed <= 0) {
+            return false;
+        }
 
-    size_t size = NX * NY * NZ * sizeof(float);
+        value = parsed;
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+void print_usage(const char* program_name) {
+    std::cout << "Usage: " << program_name << " [nx ny nz]" << std::endl;
+    std::cout << "If no arguments are provided, the default size 256 256 256 is used." << std::endl;
+}
+
+int main(int argc, char** argv) {
+    int nx = 256;
+    int ny = 256;
+    int nz = 256;
+
+    if (argc != 1 && argc != 4) {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    if (argc == 4) {
+        if (!parse_dimension_arg(argv[1], nx) || !parse_dimension_arg(argv[2], ny) ||
+            !parse_dimension_arg(argv[3], nz)) {
+            std::cerr << "Invalid dimension arguments. nx, ny, and nz must be positive integers."
+                      << std::endl;
+            print_usage(argv[0]);
+            return EXIT_FAILURE;
+        }
+    }
+
+    size_t element_count = static_cast<size_t>(nx) * static_cast<size_t>(ny) *
+                           static_cast<size_t>(nz);
+    size_t size = element_count * sizeof(float);
 
     std::cout << "========================================" << std::endl;
     std::cout << "3D Stencil Kernel Benchmark" << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "Grid Size: " << NX << " x " << NY << " x " << NZ << std::endl;
-    std::cout << "Total Elements: " << NX * NY * NZ << std::endl;
+    std::cout << "Grid Size: " << nx << " x " << ny << " x " << nz << std::endl;
+    std::cout << "Total Elements: " << element_count << std::endl;
     std::cout << "Memory Size: " << size / (1024.0 * 1024.0) << " MB" << std::endl;
     std::cout << "========================================" << std::endl;
 
@@ -62,9 +103,9 @@ int main() {
     // Host allocation
     //-----------------------------------
 
-    std::vector<float> h_in(NX * NY * NZ);
-    std::vector<float> h_ref(NX * NY * NZ);
-    std::vector<float> h_out(NX * NY * NZ);
+    std::vector<float> h_in(element_count);
+    std::vector<float> h_ref(element_count);
+    std::vector<float> h_out(element_count);
 
     init_data(h_in);
 
@@ -76,7 +117,7 @@ int main() {
 
     auto cpu_start = std::chrono::high_resolution_clock::now();
 
-    cpu_stencil(h_in.data(), h_ref.data(), NX, NY, NZ);
+    cpu_stencil(h_in.data(), h_ref.data(), nx, ny, nz);
 
     auto cpu_end = std::chrono::high_resolution_clock::now();
 
@@ -115,7 +156,7 @@ int main() {
 
     CHECK_CUDA(cudaEventRecord(start));
 
-    launch_naive(d_in, d_out, NX, NY, NZ);
+    launch_native(d_in, d_out, nx, ny, nz);
 
     CHECK_CUDA(cudaEventRecord(stop));
     CHECK_CUDA(cudaEventSynchronize(stop));
@@ -141,7 +182,7 @@ int main() {
 
     CHECK_CUDA(cudaEventRecord(start));
 
-    launch_shared(d_in, d_out, NX, NY, NZ);
+    launch_shared(d_in, d_out, nx, ny, nz);
 
     CHECK_CUDA(cudaEventRecord(stop));
     CHECK_CUDA(cudaEventSynchronize(stop));
@@ -167,7 +208,7 @@ int main() {
 
     CHECK_CUDA(cudaEventRecord(start));
 
-    launch_coarsened(d_in, d_out, NX, NY, NZ);
+    launch_coarsened(d_in, d_out, nx, ny, nz);
 
     CHECK_CUDA(cudaEventRecord(stop));
     CHECK_CUDA(cudaEventSynchronize(stop));

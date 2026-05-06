@@ -1,10 +1,9 @@
-#include "../include/common.cuh"
-#include "../include/stencil.cuh"
+#include "common.cuh"
+#include "stencil.cuh"
 
 // Coarsened kernel - combines shared memory with loop coarsening
 // Each thread computes multiple output elements to improve instruction-level parallelism
-__global__ void coarsened_stencil_kernel(const float* __restrict__ in,
-                                         float* __restrict__ out,
+__global__ void coarsened_stencil_kernel(const float* __restrict__ in, float* __restrict__ out,
                                          int nx, int ny, int nz) {
     // TODO: Implement coarsened 3D stencil kernel
     //
@@ -22,9 +21,6 @@ __global__ void coarsened_stencil_kernel(const float* __restrict__ in,
     // 6. For each plane, compute stencil using shared memory
     // 7. Write results to global memory
 
-    constexpr int TILE_SIZE = 16;
-    constexpr int COARSENING_FACTOR = 4;  // Each thread computes 4 z-planes
-
     __shared__ float s_data[COARSENING_FACTOR + 2][TILE_SIZE + 2][TILE_SIZE + 2];
 
     int tx = threadIdx.x;
@@ -32,10 +28,34 @@ __global__ void coarsened_stencil_kernel(const float* __restrict__ in,
 
     int i = blockIdx.x * TILE_SIZE + tx;
     int j = blockIdx.y * TILE_SIZE + ty;
+    int k_base = blockIdx.z * COARSENING_FACTOR;
+
+    int s_i = tx + 1;
+    int s_j = ty + 1;
 
     // TODO: Load data into shared memory
     // Load multiple z-planes into shared memory
     // Handle halo regions and boundary conditions
+    for (size_t z_tile = 0; z_tile < COARSENING_FACTOR + 2; z_tile++) {
+        int k = k_base + z_tile - 1;
+        if (k >= 0 && k < nz && i < nx && j < ny) {
+            int idx = i + j * nx + k * nx * ny;
+            s_data[z_tile][s_j][s_i] = in[idx];
+
+            if (tx == 0 && i > 0) {
+                s_data[z_tile][s_j][0] = in[idx - 1];
+            }
+            if (tx == blockDim.x - 1 && i < nx - 1) {
+                s_data[z_tile][s_j][s_i + 1] = in[idx + 1];
+            }
+            if (ty == 0 && j > 0) {
+                s_data[z_tile][0][s_i] = in[idx - nx];
+            }
+            if (ty == blockDim.y - 1 && j < ny - 1) {
+                s_data[z_tile][s_j + 1][s_i] = in[idx + nx];
+            }
+        }
+    }
 
     __syncthreads();
 
@@ -47,13 +67,16 @@ __global__ void coarsened_stencil_kernel(const float* __restrict__ in,
         if (i > 0 && i < nx - 1 && j > 0 && j < ny - 1) {
             // TODO: Loop over z-planes with coarsening
             for (int c = 0; c < COARSENING_FACTOR; c++) {
-                int k = blockIdx.z * COARSENING_FACTOR + c;
+                int k = k_base + c;
 
                 if (k > 0 && k < nz - 1) {
-                    // TODO: Compute stencil using shared memory
                     // Access s_data[c+1][ty][tx] and neighbors
                     int idx = i + j * nx + k * nx * ny;
-                    out[idx] = in[idx];  // Placeholder
+                    out[idx] =
+                        kCenter * s_data[c + 1][s_j][s_i] +
+                        kNeighbor * (s_data[c + 1][s_j][s_i - 1] + s_data[c + 1][s_j][s_i + 1] +
+                                     s_data[c + 1][s_j - 1][s_i] + s_data[c + 1][s_j + 1][s_i] +
+                                     s_data[c][s_j][s_i] + s_data[c + 2][s_j][s_i]);
                 }
             }
         }
@@ -65,12 +88,8 @@ void launch_coarsened(const float* d_in, float* d_out, int nx, int ny, int nz) {
     // TODO: Configure and launch coarsened kernel
     // Adjust grid dimensions to account for coarsening factor
 
-    constexpr int TILE_SIZE = 16;
-    constexpr int COARSENING_FACTOR = 4;
-
     dim3 block(TILE_SIZE, TILE_SIZE, 1);
-    dim3 grid((nx + TILE_SIZE - 1) / TILE_SIZE,
-              (ny + TILE_SIZE - 1) / TILE_SIZE,
+    dim3 grid((nx + TILE_SIZE - 1) / TILE_SIZE, (ny + TILE_SIZE - 1) / TILE_SIZE,
               (nz + COARSENING_FACTOR - 1) / COARSENING_FACTOR);
 
     coarsened_stencil_kernel<<<grid, block>>>(d_in, d_out, nx, ny, nz);

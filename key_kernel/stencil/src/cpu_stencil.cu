@@ -1,9 +1,8 @@
-#include "../include/common.cuh"
-#include "../include/stencil.cuh"
+#include "common.cuh"
+#include "stencil.cuh"
 
 // CPU baseline implementation
 void cpu_stencil(const float* in, float* out, int nx, int ny, int nz) {
-    // TODO: Implement 7-point 3D stencil on CPU
     // For each interior point (i, j, k), compute:
     // out[idx] = kCenter * in[idx] +
     //            kNeighbor * (in[idx-1] + in[idx+1] +
@@ -17,8 +16,9 @@ void cpu_stencil(const float* in, float* out, int nx, int ny, int nz) {
         for (int j = 1; j < ny - 1; j++) {
             for (int i = 1; i < nx - 1; i++) {
                 int idx = i + j * nx + k * nx * ny;
-                // TODO: Compute stencil here
-                out[idx] = in[idx];  // Placeholder
+                out[idx] = kCenter * in[idx] +
+                           kNeighbor * (in[idx - 1] + in[idx + 1] + in[idx - nx] + in[idx + nx] +
+                                        in[idx - nx * ny] + in[idx + nx * ny]);
             }
         }
     }

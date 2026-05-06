@@ -9,6 +9,10 @@
 #include <random>
 #include <vector>
 
+#define TILE_SIZE 16
+#define COARSENING_FACTOR 32
+#define THREAD_PER_DIM 8
+
 #define CHECK_CUDA(call)                                                                        \
     do {                                                                                        \
         cudaError_t err = call;                                                                 \
