@@ -10,7 +10,7 @@ extern __constant__ float d_filter_constant[MAX_FILTER_SIZE * MAX_FILTER_SIZE];
 void conv_cpu(const float* input, const float* filter, float* output, int width,
               int height, int filter_size);
 
-void launch_conv_naive(const float* d_input, const float* filter, float* d_output, int width,
+void launch_conv_native(const float* d_input, const float* filter, float* d_output, int width,
                        int height, int filter_size);
 
 void copy_filter_to_constant(const float* filter, int filter_size);

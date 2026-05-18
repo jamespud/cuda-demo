@@ -1,6 +1,6 @@
 #include "conv.cuh"
 
-__global__ void conv_naive_kernel(const float* input, const float* filter, float* output,
+__global__ void conv_native_kernel(const float* input, const float* filter, float* output,
                                   int width, int height, int filter_size) {
     const int row = blockDim.y * blockIdx.y + threadIdx.y;
     const int col = blockDim.x * blockIdx.x + threadIdx.x;
@@ -26,12 +26,12 @@ __global__ void conv_naive_kernel(const float* input, const float* filter, float
     output[row * width + col] = sum;
 }
 
-void launch_conv_naive(const float* d_input, const float* filter, float* d_output, int width,
+void launch_conv_native(const float* d_input, const float* filter, float* d_output, int width,
                        int height, int filter_size) {
     dim3 block(16, 16);
     dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-    conv_naive_kernel<<<grid, block>>>(d_input, filter, d_output, width, height, filter_size);
+    conv_native_kernel<<<grid, block>>>(d_input, filter, d_output, width, height, filter_size);
 
     CHECK_CUDA(cudaGetLastError());
 }

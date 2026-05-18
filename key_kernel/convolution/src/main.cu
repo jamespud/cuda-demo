@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     double copy_from_gpu_ms = 0.0;
 
     timer.start();
-    launch_conv_naive(d_input, d_filter, d_output, width, height, filter_size);
+    launch_conv_native(d_input, d_filter, d_output, width, height, filter_size);
     float naive_kernel_ms = timer.stop();
     LOG_INFO(format_time_line("GPU kernel time (without tiling): ", naive_kernel_ms));
 
@@ -155,6 +155,11 @@ int main(int argc, char* argv[]) {
     if (!check_result(h_output_cpu.data(), h_output_gpu.data(), static_cast<int>(size))) {
         success = false;
     }
+
+    timer.start();
+    copy_filter_to_constant(h_filter.data(), filter_size);
+    float constant_kernel_ms = timer.stop();
+    LOG_INFO(format_time_line("GPU kernel time (with constant): ", constant_kernel_ms));
 
     LOG_INFO(format_time_line("Copy from GPU time: ", copy_from_gpu_ms));
 
