@@ -1,8 +1,8 @@
-#include "../include/common.cuh"
-#include "../include/stencil.cuh"
-
 #include <exception>
 #include <string>
+
+#include "../include/common.cuh"
+#include "../include/stencil.cuh"
 
 // Performance statistics structure
 struct PerfStats {
@@ -12,34 +12,29 @@ struct PerfStats {
 };
 
 // Print performance comparison table
-void print_performance_table(const PerfStats& cpu, const PerfStats& naive,
-                             const PerfStats& shared, const PerfStats& coarsened) {
+void print_performance_table(const PerfStats& cpu, const PerfStats& naive, const PerfStats& shared,
+                             const PerfStats& coarsened) {
     std::cout << "\n========================================" << std::endl;
     std::cout << "Performance Comparison" << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << std::left << std::setw(15) << "Version"
-              << std::setw(15) << "Time (ms)"
+    std::cout << std::left << std::setw(15) << "Version" << std::setw(15) << "Time (ms)"
               << std::setw(15) << "Speedup"
               << "Status" << std::endl;
     std::cout << std::string(60, '-') << std::endl;
 
-    std::cout << std::left << std::setw(15) << "CPU"
-              << std::setw(15) << std::fixed << std::setprecision(3) << cpu.time_ms
-              << std::setw(15) << "1.00x"
+    std::cout << std::left << std::setw(15) << "CPU" << std::setw(15) << std::fixed
+              << std::setprecision(3) << cpu.time_ms << std::setw(15) << "1.00x"
               << "N/A" << std::endl;
 
-    std::cout << std::left << std::setw(15) << "Naive CUDA"
-              << std::setw(15) << naive.time_ms
+    std::cout << std::left << std::setw(15) << "Naive CUDA" << std::setw(15) << naive.time_ms
               << std::setw(15) << std::fixed << std::setprecision(2) << naive.speedup << "x"
               << (naive.passed ? "PASS" : "FAIL") << std::endl;
 
-    std::cout << std::left << std::setw(15) << "Shared Mem"
-              << std::setw(15) << shared.time_ms
+    std::cout << std::left << std::setw(15) << "Shared Mem" << std::setw(15) << shared.time_ms
               << std::setw(15) << std::fixed << std::setprecision(2) << shared.speedup << "x"
               << (shared.passed ? "PASS" : "FAIL") << std::endl;
 
-    std::cout << std::left << std::setw(15) << "Coarsened"
-              << std::setw(15) << coarsened.time_ms
+    std::cout << std::left << std::setw(15) << "Coarsened" << std::setw(15) << coarsened.time_ms
               << std::setw(15) << std::fixed << std::setprecision(2) << coarsened.speedup << "x"
               << (coarsened.passed ? "PASS" : "FAIL") << std::endl;
 
@@ -87,8 +82,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    size_t element_count = static_cast<size_t>(nx) * static_cast<size_t>(ny) *
-                           static_cast<size_t>(nz);
+    size_t element_count =
+        static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
     size_t size = element_count * sizeof(float);
 
     std::cout << "========================================" << std::endl;
@@ -127,6 +122,9 @@ int main(int argc, char** argv) {
 
     PerfStats cpu_stats{cpu_ms, true, 1.0};
 
+    size_t bytes =
+        static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz) * sizeof(float);
+
     //-----------------------------------
     // Device allocation
     //-----------------------------------
@@ -153,6 +151,8 @@ int main(int argc, char** argv) {
     //-----------------------------------
 
     std::cout << "\n[Running Naive CUDA kernel...]" << std::endl;
+    
+    CHECK_CUDA(cudaMemset(d_out, 0, bytes));
 
     CHECK_CUDA(cudaEventRecord(start));
 
@@ -169,8 +169,7 @@ int main(int argc, char** argv) {
 
     bool naive_ok = validate_result(h_ref, h_out);
 
-    std::cout << "[Naive CUDA] " << naive_ms << " ms "
-              << (naive_ok ? "PASS" : "FAIL") << std::endl;
+    std::cout << "[Naive CUDA] " << naive_ms << " ms " << (naive_ok ? "PASS" : "FAIL") << std::endl;
 
     PerfStats naive_stats{static_cast<double>(naive_ms), naive_ok, cpu_ms / naive_ms};
 
@@ -179,6 +178,8 @@ int main(int argc, char** argv) {
     //-----------------------------------
 
     std::cout << "\n[Running Shared Memory kernel...]" << std::endl;
+
+    CHECK_CUDA(cudaMemset(d_out, 0, bytes));
 
     CHECK_CUDA(cudaEventRecord(start));
 
@@ -195,8 +196,8 @@ int main(int argc, char** argv) {
 
     bool shared_ok = validate_result(h_ref, h_out);
 
-    std::cout << "[Shared Mem] " << shared_ms << " ms "
-              << (shared_ok ? "PASS" : "FAIL") << std::endl;
+    std::cout << "[Shared Mem] " << shared_ms << " ms " << (shared_ok ? "PASS" : "FAIL")
+              << std::endl;
 
     PerfStats shared_stats{static_cast<double>(shared_ms), shared_ok, cpu_ms / shared_ms};
 
@@ -205,6 +206,8 @@ int main(int argc, char** argv) {
     //-----------------------------------
 
     std::cout << "\n[Running Coarsened kernel...]" << std::endl;
+
+    CHECK_CUDA(cudaMemset(d_out, 0, bytes));
 
     CHECK_CUDA(cudaEventRecord(start));
 
@@ -221,10 +224,11 @@ int main(int argc, char** argv) {
 
     bool coarsened_ok = validate_result(h_ref, h_out);
 
-    std::cout << "[Coarsened] " << coarsened_ms << " ms "
-              << (coarsened_ok ? "PASS" : "FAIL") << std::endl;
+    std::cout << "[Coarsened] " << coarsened_ms << " ms " << (coarsened_ok ? "PASS" : "FAIL")
+              << std::endl;
 
-    PerfStats coarsened_stats{static_cast<double>(coarsened_ms), coarsened_ok, cpu_ms / coarsened_ms};
+    PerfStats coarsened_stats{static_cast<double>(coarsened_ms), coarsened_ok,
+                              cpu_ms / coarsened_ms};
 
     //-----------------------------------
     // Print performance summary
