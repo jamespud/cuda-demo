@@ -15,3 +15,4 @@ add_subdirectory(exercise/ch3)
 
 add_subdirectory(key_kernel/convolution)
 add_subdirectory(key_kernel/stencil)
+add_subdirectory(key_kernel/histogram)
